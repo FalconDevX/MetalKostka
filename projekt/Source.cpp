@@ -83,7 +83,6 @@ int main() {
 
     Shader shader("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
 
-    // ---------------------- Wczytaj model OBJ ---------------------
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -103,8 +102,7 @@ int main() {
             float vy = attrib.vertices[3 * index.vertex_index + 1];
             float vz = attrib.vertices[3 * index.vertex_index + 2];
 
-            float tx = 0.0f;
-            float ty = 0.0f;
+            float tx = 0.0f, ty = 0.0f;
             if (!attrib.texcoords.empty() && index.texcoord_index >= 0) {
                 tx = attrib.texcoords[2 * index.texcoord_index + 0];
                 ty = attrib.texcoords[2 * index.texcoord_index + 1];
@@ -117,13 +115,12 @@ int main() {
             vertices.push_back(ty);
         }
 
-        for (size_t i = 0; i < shape.mesh.indices.size(); i++) {
+        for (size_t i = 0; i < shape.mesh.indices.size(); i++)
             indices.push_back(static_cast<unsigned int>(indexOffset + i));
-        }
+
         indexOffset += static_cast<unsigned int>(shape.mesh.indices.size());
     }
 
-    // ------------------ Tekstura modelu (kowadło) ------------------
     GLuint texture, cubeTexture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -140,12 +137,9 @@ int main() {
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
-    else {
-        std::cerr << "Failed to load model texture\n";
-    }
+    else std::cerr << "Failed to load model texture\n";
     stbi_image_free(data);
 
-    // ------------------ Tekstura kostki ------------------
     glGenTextures(1, &cubeTexture);
     glBindTexture(GL_TEXTURE_2D, cubeTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -160,12 +154,9 @@ int main() {
         glTexImage2D(GL_TEXTURE_2D, 0, format2, width2, height2, 0, format2, GL_UNSIGNED_BYTE, data2);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
-    else {
-        std::cerr << "Failed to load cube texture\n";
-    }
+    else std::cerr << "Failed to load cube texture\n";
     stbi_image_free(data2);
 
-    // ------------------ VAO/VBO/EBO model ------------------
     GLuint VAO, VBO, EBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -174,7 +165,6 @@ int main() {
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
-
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
@@ -183,21 +173,20 @@ int main() {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    // ------------------ VAO/VBO kostki ------------------
     GLuint cubeVAO, cubeVBO;
     glGenVertexArrays(1, &cubeVAO);
     glGenBuffers(1, &cubeVBO);
-
     glBindVertexArray(cubeVAO);
     glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
     glBufferData(GL_ARRAY_BUFFER, cubeVerticesCount * sizeof(float), cubeVertices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 
-    // ------------------ Pętla renderowania ------------------
     shader.use();
     shader.setInt("texture1", 0);
 
@@ -212,13 +201,17 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glm::mat4 view = camera.GetViewMatrix();
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
 
         shader.use();
         shader.setMat4("view", view);
         shader.setMat4("projection", projection);
+        glm::vec3 cubePosition = glm::vec3(0.0f, 5.0f, 0.0f);
+        shader.setVec3("viewPos", camera.Position);
+        shader.setVec3("lightPos", glm::vec3(0.0f, 5.0f, 0.0f));
 
-        // --------- Kowadło ---------
+        // ---------------- Kowadło ----------------
+        shader.setBool("isEmissive", false);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
         glBindVertexArray(VAO);
@@ -226,11 +219,12 @@ int main() {
         shader.setMat4("model", modelMatrix);
         glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0);
 
-        // --------- Kostka ---------
+        // ---------------- Kostka (świecąca) ----------------
+        shader.setBool("isEmissive", true);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, cubeTexture);
         glBindVertexArray(cubeVAO);
-        glm::mat4 cubeModel = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 3.5f, 0.0f));
+        glm::mat4 cubeModel = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 5.0f, 0.0f));
         shader.setMat4("model", cubeModel);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
@@ -238,7 +232,6 @@ int main() {
         glfwPollEvents();
     }
 
-    // ------------------ Clean up ------------------
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
