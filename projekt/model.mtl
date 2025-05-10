@@ -1,0 +1,12 @@
+# Blender 4.3.2 MTL File: 'Kowadełko.blend'
+# www.blender.org
+
+newmtl Material
+Ns 350.660431
+Ka 0.820276 0.820276 0.820276
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 3
+map_Kd C:/Users/mateu/Downloads/e536669a-0eca-402d-a177-fabd4737c6f4.png

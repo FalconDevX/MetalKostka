@@ -133,12 +133,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cube_vertices.cpp" />
+    <ClCompile Include="dependencies\include\cube_vertices.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="tin_obj_loader.cc" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dependencies\include\Camera.h" />
+    <ClInclude Include="dependencies\include\cube_vertices.h" />
     <ClInclude Include="dependencies\include\Shader.h" />
     <ClInclude Include="dependencies\include\sphere_generator.h" />
     <ClInclude Include="dependencies\include\shader_loader.h" />
