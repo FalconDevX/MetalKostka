@@ -138,9 +138,15 @@
     <ClCompile Include="tin_obj_loader.cc" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dependencies\include\Camera.h" />
+    <ClInclude Include="dependencies\include\Shader.h" />
     <ClInclude Include="dependencies\include\sphere_generator.h" />
     <ClInclude Include="dependencies\include\shader_loader.h" />
     <ClInclude Include="dependencies\include\tiny_obj_loader.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\fragment_shader.glsl" />
+    <None Include="shaders\vertex_shader.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
