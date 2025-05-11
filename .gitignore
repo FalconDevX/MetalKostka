@@ -1,6 +1,8 @@
+# Visual Studio folders
 .vs/
 x64/
-projekt/x64/
 **/x64/
-.x64/
-.projekt/x64/
+Debug/
+**/Debug/
+Release/
+**/Release/
