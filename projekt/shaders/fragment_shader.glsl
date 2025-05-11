@@ -6,46 +6,42 @@ in vec3 FragPos;
 in vec3 Normal;
 
 uniform sampler2D texture1;
+uniform sampler2D cubeTexture;
 uniform vec3 lightPos;
 uniform vec3 viewPos;
 uniform bool isEmissive;
 
 void main()
 {
-    vec3 textureColor = texture(texture1, TexCoords).rgb;
-
-    if (isEmissive) {
-        // Kostka świeci sama, bez wpływu światła
-        FragColor = vec4(textureColor * 2.0, 1.0);   // możesz dać np. 5.0 żeby świeciła jeszcze mocniej
+    if (isEmissive)
+    {
+        vec3 texColor = texture(cubeTexture, TexCoords).rgb;
+        vec3 lavaBoost = vec3(1.5, 1.0, 0.5);
+        FragColor = vec4(texColor * lavaBoost * 1.5, 1.0);
         return;
     }
 
-    // ---------------- Lighting ----------------
-    vec3 ambientColor = vec3(0.2);
-    vec3 diffuseColor = vec3(1.0);   // większa intensywność światła
-    vec3 specularColor = vec3(1.0);
-    float shininess = 32.0;
+    vec3 albedo = texture(texture1, TexCoords).rgb;
+    vec3 ambient = 0.2 * albedo;
 
-    // Ambient
-    vec3 ambient = ambientColor * textureColor;
-
-    // Diffuse + attenuation
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(lightPos - FragPos);
+    vec3 viewDir = normalize(viewPos - FragPos);
+
+    vec3 lightColor = vec3(1.5, 0.5, 0.1);
+
     float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = diff * lightColor * albedo;
+
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+    float spec = pow(max(dot(norm, halfwayDir), 0.0), 32.0);
+    vec3 specular = lightColor * spec;
 
     float distance = length(lightPos - FragPos);
-    float attenuation = 1.0 / (distance * distance);    // <- TU JEST KLUCZ! (kwadratowy spadek światła)
+    float attenuation = 1.0 / (1.0 + 0.09 * distance + 0.032 * (distance * distance));
+    diffuse *= attenuation;
+    specular *= attenuation;
 
-    vec3 diffuse = diffuseColor * diff * attenuation * textureColor;
-
-    // Specular + attenuation
-    vec3 viewDir = normalize(viewPos - FragPos);
-    vec3 reflectDir = reflect(-lightDir, norm);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-    vec3 specular = specularColor * spec * attenuation;
-
-    // ---------------- Final color ----------------
     vec3 result = ambient + diffuse + specular;
     FragColor = vec4(result, 1.0);
 }

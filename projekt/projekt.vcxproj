@@ -148,6 +148,8 @@
     <ClInclude Include="dependencies\include\tiny_obj_loader.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\depth_fragment_shader.glsl" />
+    <None Include="shaders\depth_vertex_shader.glsl" />
     <None Include="shaders\fragment_shader.glsl" />
     <None Include="shaders\vertex_shader.glsl" />
   </ItemGroup>

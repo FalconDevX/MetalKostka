@@ -1,12 +1,14 @@
 ﻿C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VC\v170\Microsoft.CppBuild.targets(1122,5): warning MSB8027: Two or more files with the name of cube_vertices.cpp will produce outputs to the same location. This can lead to an incorrect build result.  The files involved are cube_vertices.cpp, dependencies\include\cube_vertices.cpp.
   Source.cpp
-C:\OpenGL\projekt\projekt\Source.cpp(31,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\OpenGL\projekt\projekt\Source.cpp(32,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\OpenGL\projekt\projekt\Source.cpp(36,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\OpenGL\projekt\projekt\Source.cpp(37,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\OpenGL\projekt\projekt\Source.cpp(38,13): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\OpenGL\projekt\projekt\Source.cpp(39,13): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\OpenGL\projekt\projekt\Source.cpp(194,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\projekt\projekt\Source.cpp(32,31): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\projekt\projekt\Source.cpp(32,45): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\projekt\projekt\Source.cpp(33,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\projekt\projekt\Source.cpp(34,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\projekt\projekt\Source.cpp(35,13): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\projekt\projekt\Source.cpp(35,27): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\projekt\projekt\Source.cpp(206,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\projekt\projekt\Source.cpp(229,55): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\OpenGL\projekt\projekt\Source.cpp(254,55): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
 x64\Debug\cube_vertices.obj : warning LNK4042: object specified more than once; extras ignored
 LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
   projekt.vcxproj -> C:\OpenGL\projekt\x64\Debug\projekt.exe

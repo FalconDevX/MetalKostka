@@ -54,5 +54,7 @@
   <ItemGroup>
     <None Include="shaders\vertex_shader.glsl" />
     <None Include="shaders\fragment_shader.glsl" />
+    <None Include="shaders\depth_fragment_shader.glsl" />
+    <None Include="shaders\depth_vertex_shader.glsl" />
   </ItemGroup>
 </Project>
