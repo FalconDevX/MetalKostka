@@ -1,4 +1,4 @@
-﻿// --- Source.cpp FINALNY komplet dla Twojego projektu ---
+﻿#include <SFML/Audio.hpp>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -12,8 +12,10 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "dependencies/include/stb/stb_image.h"
 
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+
+unsigned int SCR_WIDTH = 800;
+unsigned int SCR_HEIGHT = 600;
+
 const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
 Camera camera;
@@ -23,11 +25,21 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+// Zmienne do kontroli ruchu kostki
+float rotationAngle = 0.0f;    // Kąt orbity wokół kowadła
+float spinAngle = 0.0f;        // Kąt obrotu wokół własnej osi
+const float orbitSpeed = 1.0f; // Prędkość orbity (radiany na sekundę)
+const float spinSpeed = 2.0f;  // Prędkość obrotu kostki (radiany na sekundę)
+const float orbitRadius = 3.0f;// Promień orbity
+
 glm::vec3 cubePosition = glm::vec3(0.0f, 5.0f, 0.0f);
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    SCR_WIDTH = width;
+    SCR_HEIGHT = height;
     glViewport(0, 0, width, height);
 }
+
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     if (firstMouse) { lastX = xpos; lastY = ypos; firstMouse = false; }
     float xoffset = xpos - lastX;
@@ -57,8 +69,12 @@ int main() {
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) return -1;
 
     glEnable(GL_DEPTH_TEST);
+    sf::Music music;
+    if (!music.openFromFile("sounds/templars.mp3"))
+        std::cerr << "Błąd ładowania pliku muzycznego!" << std::endl;
+    music.play();
     Shader shader("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
-    Shader depthShader("shaders/depth_vertex_shader.glsl", "shaders/depth_fragment_shader.glsl");
+    Shader depthShader("shaders/depth_vertex_shader.glsl", "shaders/depth_fragment.glsl");
 
     float far_plane = 25.0f;
     unsigned int depthMapFBO;
@@ -208,13 +224,24 @@ int main() {
         lastFrame = currentFrame;
         processInput(window);
 
+        // Dodaj to ZARAZ po obliczeniu deltaTime
+        rotationAngle += orbitSpeed * deltaTime;
+        if (rotationAngle > 2 * glm::pi<float>())
+            rotationAngle -= 2 * glm::pi<float>();
+
+        // Aktualizacja pozycji kostki - ruch po okręgu
+        cubePosition.x = orbitRadius * cos(rotationAngle);
+        cubePosition.z = orbitRadius * sin(rotationAngle);
+        cubePosition.y = 5.0f; // wysokość stała, jak wcześniej
+
+
         glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), 1.0f, 1.0f, far_plane);
         std::vector<glm::mat4> shadowTransforms = {
-            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1,0,0), glm::vec3(0,-1,0)),
+            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1,0,0),  glm::vec3(0,-1,0)),
             shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1,0,0), glm::vec3(0,-1,0)),
-            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0,1,0), glm::vec3(0,0,1)),
+            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0,1,0),  glm::vec3(0,0,1)),
             shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0,-1,0), glm::vec3(0,0,-1)),
-            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0,0,1), glm::vec3(0,-1,0)),
+            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0,0,1),  glm::vec3(0,-1,0)),
             shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0,0,-1), glm::vec3(0,-1,0))
         };
 
@@ -222,8 +249,11 @@ int main() {
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
         depthShader.use();
-        for (unsigned int i = 0; i < 6; ++i)
-            depthShader.setMat4("lightSpaceMatrix", shadowTransforms[i]);
+        for (unsigned int i = 0; i < 6; ++i) {
+            depthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+        }
+        depthShader.setVec3("lightPos", lightPos);
+        depthShader.setFloat("farPlane", far_plane);
         depthShader.setMat4("model", glm::mat4(1.0f));
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 8);
@@ -233,6 +263,7 @@ int main() {
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+        // 2. Normalne renderowanie sceny
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         shader.use();
@@ -245,6 +276,7 @@ int main() {
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+        shader.setInt("depthMap", 1);
 
         shader.setBool("isEmissive", false);
         glActiveTexture(GL_TEXTURE0);
