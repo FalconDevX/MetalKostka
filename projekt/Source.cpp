@@ -55,6 +55,61 @@ void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.ProcessKeyboard(RIGHT, deltaTime);
 }
 
+
+//do nieba
+
+void generateSphere(std::vector<float>& vertices, std::vector<unsigned int>& indices, unsigned int X_SEGMENTS = 64, unsigned int Y_SEGMENTS = 64) {
+    const float PI = 3.14159265359f;
+    for (unsigned int y = 0; y <= Y_SEGMENTS; ++y) {
+        for (unsigned int x = 0; x <= X_SEGMENTS; ++x) {
+            float xSegment = (float)x / X_SEGMENTS;
+            float ySegment = (float)y / Y_SEGMENTS;
+            float xPos = std::cos(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+            float yPos = std::cos(ySegment * PI);
+            float zPos = std::sin(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+            vertices.push_back(xPos);
+            vertices.push_back(yPos);
+            vertices.push_back(zPos);
+        }
+    }
+
+    for (unsigned int y = 0; y < Y_SEGMENTS; ++y) {
+        for (unsigned int x = 0; x < X_SEGMENTS; ++x) {
+            indices.push_back(y * (X_SEGMENTS + 1) + x);
+            indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
+            indices.push_back((y + 1) * (X_SEGMENTS + 1) + x + 1);
+
+            indices.push_back(y * (X_SEGMENTS + 1) + x);
+            indices.push_back((y + 1) * (X_SEGMENTS + 1) + x + 1);
+            indices.push_back(y * (X_SEGMENTS + 1) + x + 1);
+        }
+    }
+}
+GLuint loadEquirectangularTexture(const char* path) {
+    int width, height, nrChannels;
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char* data = stbi_load(path, &width, &height, &nrChannels, 0);
+    if (!data) {
+        std::cerr << "Nie udało się załadować tekstury: " << path << std::endl;
+        return 0;
+    }
+
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    GLenum format = (nrChannels == 3) ? GL_RGB : GL_RGBA;
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    // Ustaw parametry
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    stbi_image_free(data);
+    return textureID;
+}
 int main() {
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -75,6 +130,12 @@ int main() {
     music.play();
     Shader shader("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
     Shader depthShader("shaders/depth_vertex_shader.glsl", "shaders/depth_fragment.glsl");
+    
+    //shader dla nieba
+    Shader skyShader("shaders/sky_vertex.glsl", "shaders/sky_frag.glsl");
+    std::vector<float> verticesSky;
+    std::vector<unsigned int> indicesSky;
+    generateSphere(verticesSky, indicesSky);
 
     float far_plane = 25.0f;
     unsigned int depthMapFBO;
@@ -212,12 +273,31 @@ int main() {
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
     glEnableVertexAttribArray(2);
+    //niebo
+    GLuint sVAO, sVBO, sEBO;
+    glGenVertexArrays(1, &sVAO);
+    glGenBuffers(1, &sVBO);
+    glGenBuffers(1, &sEBO);
+
+    glBindVertexArray(sVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, sVBO);
+    glBufferData(GL_ARRAY_BUFFER, verticesSky.size() * sizeof(float), &verticesSky[0], GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicesSky.size() * sizeof(unsigned int), &indicesSky[0], GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    GLuint equirectTex = loadEquirectangularTexture("textures/bg.jpg");
+    //
 
     shader.use();
     shader.setInt("texture1", 0);
     shader.setInt("cubeTexture", 2);
 
     while (!glfwWindowShouldClose(window)) {
+
         glm::vec3 lightPos = cubePosition;
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -262,10 +342,34 @@ int main() {
         glBindVertexArray(cubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        //niebo
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        glDepthMask(GL_FALSE); // Wyłącz zapis do bufora głębokości
+        skyShader.use();
+
+        glm::mat4 projection = glm::perspective(glm::radians(60.0f), 800.f / 600.f, 0.1f, 100.0f);
+        glm::mat4 view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
+
+        glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(10.0f));
+
+        skyShader.setMat4("projection", projection);
+        skyShader.setMat4("view", view);
+        skyShader.setMat4("model", model);
+        skyShader.setInt("equirectangularMap", 0);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, equirectTex);
+        glBindVertexArray(sVAO);
+        skyShader.setInt("equirectangularMap", 0);
+
+        glBindVertexArray(sVAO);
+        glDrawElements(GL_TRIANGLES, indicesSky.size(), GL_UNSIGNED_INT, 0);
+        glDepthMask(GL_TRUE); // Włącz zapis głębokości z powrotem
+        //
         // 2. Normalne renderowanie sceny
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         shader.use();
         shader.setVec3("viewPos", camera.Position);
         shader.setVec3("lightPos", lightPos);
