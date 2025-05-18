@@ -56,6 +56,8 @@
     <None Include="shaders\fragment_shader.glsl" />
     <None Include="shaders\depth_fragment_shader.glsl" />
     <None Include="shaders\depth_vertex_shader.glsl" />
+    <None Include="shaders\sky_frag.glsl" />
+    <None Include="shaders\sky_vertex.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Media Include="..\..\..\Users\mateu\Downloads\templars.mp3" />

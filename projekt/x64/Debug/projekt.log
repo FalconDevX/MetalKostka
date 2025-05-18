@@ -1,0 +1,22 @@
+﻿C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VC\v170\Microsoft.CppBuild.targets(1122,5): warning MSB8027: Two or more files with the name of cube_vertices.cpp will produce outputs to the same location. This can lead to an incorrect build result.  The files involved are cube_vertices.cpp, dependencies\include\cube_vertices.cpp.
+  Source.cpp
+C:\OpenGL\MetalKostka\projekt\external\SFML\include\SFML\System\Exception.hpp(41,47): warning C4275: non dll-interface class 'std::runtime_error' used as base for dll-interface class 'sf::Exception'
+  (compiling source file 'Source.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.43.34808\include\stdexcept(100,19):
+      see declaration of 'std::runtime_error'
+      C:\OpenGL\MetalKostka\projekt\external\SFML\include\SFML\System\Exception.hpp(41,23):
+      see declaration of 'sf::Exception'
+  
+C:\OpenGL\MetalKostka\projekt\Source.cpp(89,31): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(89,45): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(90,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(91,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(92,13): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(92,27): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(410,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(447,55): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(459,56): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(477,53): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(504,55): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(525,56): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+  projekt.vcxproj -> C:\OpenGL\MetalKostka\x64\Debug\projekt.exe

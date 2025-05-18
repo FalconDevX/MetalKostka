@@ -12,7 +12,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "dependencies/include/stb/stb_image.h"
 
-
 unsigned int SCR_WIDTH = 800;
 unsigned int SCR_HEIGHT = 600;
 
@@ -34,6 +33,52 @@ const float orbitRadius = 3.0f;// Promień orbity
 
 glm::vec3 cubePosition = glm::vec3(0.0f, 5.0f, 0.0f);
 
+// Zmienne dla drugiego modelu
+tinyobj::attrib_t attrib2;
+std::vector<tinyobj::shape_t> shapes2;
+std::vector<tinyobj::material_t> materials2;
+std::vector<float> vertices2;
+GLuint VAO2, VBO2, texture2;
+
+GLuint loadCubeLUT(const char* path) {
+    std::ifstream file(path);
+    std::string line;
+    int size = 0;
+    std::vector<float> data;
+
+    while (std::getline(file, line)) {
+        line.erase(std::remove(line.begin(), line.end(), '\r'), line.end()); // Usuń znaki nowej linii
+        if (line.empty() || line[0] == '#') continue;
+        if (line.find("LUT_3D_SIZE") != std::string::npos) {
+            std::istringstream iss(line);
+            std::string token;
+            iss >> token >> size;
+            continue;
+        }
+        if (size == 0) continue;
+        float r, g, b;
+        std::istringstream iss(line);
+        if (iss >> r >> g >> b) {
+            data.push_back(r);
+            data.push_back(g);
+            data.push_back(b);
+        }
+    }
+
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_3D, textureID);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_TEXTURE_WRAP_S);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB32F, size, size, size, 0, GL_RGB, GL_FLOAT, data.data());
+    glBindTexture(GL_TEXTURE_3D, 0);
+    return textureID;
+}
+
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     SCR_WIDTH = width;
     SCR_HEIGHT = height;
@@ -47,6 +92,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     lastX = xpos; lastY = ypos;
     camera.ProcessMouseMovement(xoffset, yoffset);
 }
+
 void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, true);
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) camera.ProcessKeyboard(FORWARD, deltaTime);
@@ -55,9 +101,7 @@ void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.ProcessKeyboard(RIGHT, deltaTime);
 }
 
-
-//do nieba
-
+// Funkcja generująca kulę dla skyboxa
 void generateSphere(std::vector<float>& vertices, std::vector<unsigned int>& indices, unsigned int X_SEGMENTS = 64, unsigned int Y_SEGMENTS = 64) {
     const float PI = 3.14159265359f;
     for (unsigned int y = 0; y <= Y_SEGMENTS; ++y) {
@@ -85,6 +129,8 @@ void generateSphere(std::vector<float>& vertices, std::vector<unsigned int>& ind
         }
     }
 }
+
+// Funkcja wczytująca teksturę equirectangular
 GLuint loadEquirectangularTexture(const char* path) {
     int width, height, nrChannels;
     stbi_set_flip_vertically_on_load(true);
@@ -101,7 +147,6 @@ GLuint loadEquirectangularTexture(const char* path) {
     glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
 
-    // Ustaw parametry
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -110,6 +155,7 @@ GLuint loadEquirectangularTexture(const char* path) {
     stbi_image_free(data);
     return textureID;
 }
+
 int main() {
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -124,15 +170,18 @@ int main() {
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) return -1;
 
     glEnable(GL_DEPTH_TEST);
+
     sf::Music music;
     if (!music.openFromFile("sounds/templars.mp3"))
         std::cerr << "Błąd ładowania pliku muzycznego!" << std::endl;
+    music.setVolume(0.0f);
     music.play();
+
     Shader shader("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
-    Shader depthShader("shaders/depth_vertex_shader.glsl", "shaders/depth_fragment.glsl");
-    
-    //shader dla nieba
+    Shader depthShader("shaders/depth_vertex_shader.glsl", "shaders/depth_fragment_shader.glsl");
     Shader skyShader("shaders/sky_vertex.glsl", "shaders/sky_frag.glsl");
+
+    // Skybox
     std::vector<float> verticesSky;
     std::vector<unsigned int> indicesSky;
     generateSphere(verticesSky, indicesSky);
@@ -157,7 +206,7 @@ int main() {
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // ---------- OBJ ----------
+    // Wczytywanie pierwszego modelu (model.obj)
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -169,6 +218,7 @@ int main() {
 
     std::vector<float> vertices;
     std::vector<glm::vec3> tempNormals;
+
     if (attrib.normals.empty()) {
         for (const auto& shape : shapes) {
             for (size_t j = 0; j < shape.mesh.indices.size(); j += 3) {
@@ -215,6 +265,35 @@ int main() {
         }
     }
 
+    // Wczytywanie drugiego modelu (lava_surface.obj)
+    if (!tinyobj::LoadObj(&attrib2, &shapes2, &materials2, &warn, &err, "lava_surface.obj")) {
+        std::cerr << "Failed to load lava_surface.obj: " << err << std::endl;
+        exit(1);
+    }
+
+    for (const auto& shape : shapes2) {
+        for (auto idx : shape.mesh.indices) {
+            float vx = attrib2.vertices[3 * idx.vertex_index];
+            float vy = attrib2.vertices[3 * idx.vertex_index + 1];
+            float vz = attrib2.vertices[3 * idx.vertex_index + 2];
+            float tx = 0.0f, ty = 0.0f;
+            if (!attrib2.texcoords.empty() && idx.texcoord_index >= 0) {
+                tx = attrib2.texcoords[2 * idx.texcoord_index];
+                ty = attrib2.texcoords[2 * idx.texcoord_index + 1];
+            }
+            float nx = 0.0f, ny = 0.0f, nz = 0.0f;
+            if (!attrib2.normals.empty() && idx.normal_index >= 0) {
+                nx = attrib2.normals[3 * idx.normal_index];
+                ny = attrib2.normals[3 * idx.normal_index + 1];
+                nz = attrib2.normals[3 * idx.normal_index + 2];
+            }
+            vertices2.insert(vertices2.end(), { vx, vy, vz, tx, ty, nx, ny, nz });
+        }
+    }
+
+    GLuint lutTexture = loadCubeLUT("MagicHour.cube");
+
+    // Tekstura dla pierwszego modelu
     GLuint texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -232,6 +311,7 @@ int main() {
     }
     stbi_image_free(data);
 
+    // Tekstura dla kostki
     GLuint cubeTexture;
     glGenTextures(1, &cubeTexture);
     glBindTexture(GL_TEXTURE_2D, cubeTexture);
@@ -240,7 +320,7 @@ int main() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     int cubeWidth, cubeHeight, cubeNrChannels;
-    unsigned char* cubeData = stbi_load("textures/cubeTexture.jpg", &cubeWidth, &cubeHeight, &cubeNrChannels, 0);
+    unsigned char* cubeData = stbi_load("textures/cubeTexture.png", &cubeWidth, &cubeHeight, &cubeNrChannels, 0);
     if (cubeData) {
         GLenum format = (cubeNrChannels == 4) ? GL_RGBA : GL_RGB;
         glTexImage2D(GL_TEXTURE_2D, 0, format, cubeWidth, cubeHeight, 0, format, GL_UNSIGNED_BYTE, cubeData);
@@ -248,6 +328,23 @@ int main() {
     }
     stbi_image_free(cubeData);
 
+    // Tekstura dla drugiego modelu (lava.png)
+    glGenTextures(1, &texture2);
+    glBindTexture(GL_TEXTURE_2D, texture2);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    int w2, h2, nc2;
+    unsigned char* data2 = stbi_load("textures/lava.jpg", &w2, &h2, &nc2, 0);
+    if (data2) {
+        GLenum format2 = (nc2 == 4) ? GL_RGBA : GL_RGB;
+        glTexImage2D(GL_TEXTURE_2D, 0, format2, w2, h2, 0, format2, GL_UNSIGNED_BYTE, data2);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    stbi_image_free(data2);
+
+    // VAO i VBO dla pierwszego modelu
     GLuint VAO, VBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -261,6 +358,7 @@ int main() {
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
+    // VAO i VBO dla kostki
     GLuint cubeVAO, cubeVBO;
     glGenVertexArrays(1, &cubeVAO);
     glGenBuffers(1, &cubeVBO);
@@ -273,56 +371,64 @@ int main() {
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
     glEnableVertexAttribArray(2);
-    //niebo
+
+    // VAO i VBO dla drugiego modelu
+    glGenVertexArrays(1, &VAO2);
+    glGenBuffers(1, &VBO2);
+    glBindVertexArray(VAO2);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO2);
+    glBufferData(GL_ARRAY_BUFFER, vertices2.size() * sizeof(float), vertices2.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    // VAO, VBO i EBO dla skyboxa
     GLuint sVAO, sVBO, sEBO;
     glGenVertexArrays(1, &sVAO);
     glGenBuffers(1, &sVBO);
     glGenBuffers(1, &sEBO);
-
     glBindVertexArray(sVAO);
     glBindBuffer(GL_ARRAY_BUFFER, sVBO);
     glBufferData(GL_ARRAY_BUFFER, verticesSky.size() * sizeof(float), &verticesSky[0], GL_STATIC_DRAW);
-
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sEBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicesSky.size() * sizeof(unsigned int), &indicesSky[0], GL_STATIC_DRAW);
-
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
     GLuint equirectTex = loadEquirectangularTexture("textures/bg.jpg");
-    //
 
     shader.use();
     shader.setInt("texture1", 0);
     shader.setInt("cubeTexture", 2);
+    shader.setInt("lutTexture", 3);
 
     while (!glfwWindowShouldClose(window)) {
-
         glm::vec3 lightPos = cubePosition;
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
         processInput(window);
 
-        // Dodaj to ZARAZ po obliczeniu deltaTime
+        // Aktualizacja pozycji kostki
         rotationAngle += orbitSpeed * deltaTime;
         if (rotationAngle > 2 * glm::pi<float>())
             rotationAngle -= 2 * glm::pi<float>();
-
-        // Aktualizacja pozycji kostki - ruch po okręgu
         cubePosition.x = orbitRadius * cos(rotationAngle);
         cubePosition.z = orbitRadius * sin(rotationAngle);
-        cubePosition.y = 5.0f; // wysokość stała, jak wcześniej
+        cubePosition.y = 5.0f;
 
-
+        // Renderowanie mapy cieni
         glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), 1.0f, 1.0f, far_plane);
         std::vector<glm::mat4> shadowTransforms = {
-            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1,0,0),  glm::vec3(0,-1,0)),
-            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1,0,0), glm::vec3(0,-1,0)),
-            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0,1,0),  glm::vec3(0,0,1)),
-            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0,-1,0), glm::vec3(0,0,-1)),
-            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0,0,1),  glm::vec3(0,-1,0)),
-            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0,0,-1), glm::vec3(0,-1,0))
+            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
+            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+            shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))
         };
 
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
@@ -334,42 +440,45 @@ int main() {
         }
         depthShader.setVec3("lightPos", lightPos);
         depthShader.setFloat("farPlane", far_plane);
+
+        // Pierwszy model
         depthShader.setMat4("model", glm::mat4(1.0f));
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 8);
+
+        // Kostka
         glm::mat4 cubeModel = glm::translate(glm::mat4(1.0f), cubePosition);
         depthShader.setMat4("model", cubeModel);
         glBindVertexArray(cubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        // Drugi model
+        glm::mat4 model2 = glm::translate(glm::mat4(1.0f), glm::vec3(-3.0f, 0.0f, 0.0f));
+        depthShader.setMat4("model", model2);
+        glBindVertexArray(VAO2);
+        glDrawArrays(GL_TRIANGLES, 0, vertices2.size() / 8);
+
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        //niebo
+
+        // Renderowanie skyboxa
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glDepthMask(GL_FALSE); // Wyłącz zapis do bufora głębokości
+        glDepthMask(GL_FALSE);
         skyShader.use();
-
-        glm::mat4 projection = glm::perspective(glm::radians(60.0f), 800.f / 600.f, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(60.0f), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
-
         glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(10.0f));
-
         skyShader.setMat4("projection", projection);
         skyShader.setMat4("view", view);
         skyShader.setMat4("model", model);
         skyShader.setInt("equirectangularMap", 0);
-
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, equirectTex);
         glBindVertexArray(sVAO);
-        skyShader.setInt("equirectangularMap", 0);
-
-        glBindVertexArray(sVAO);
         glDrawElements(GL_TRIANGLES, indicesSky.size(), GL_UNSIGNED_INT, 0);
-        glDepthMask(GL_TRUE); // Włącz zapis głębokości z powrotem
-        //
-        // 2. Normalne renderowanie sceny
+        glDepthMask(GL_TRUE);
+
+        // Normalne renderowanie sceny
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-        //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         shader.use();
         shader.setVec3("viewPos", camera.Position);
         shader.setVec3("lightPos", lightPos);
@@ -378,18 +487,26 @@ int main() {
         shader.setInt("depthMap", 1);
         shader.setFloat("farPlane", far_plane);
 
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_3D, lutTexture);
+
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
-        shader.setInt("depthMap", 1);
 
+        // Pierwszy model
         shader.setBool("isEmissive", false);
+        shader.setBool("isMatte", false);
+
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
         glBindVertexArray(VAO);
         shader.setMat4("model", glm::mat4(1.0f));
         glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 8);
 
+        // Kostka
         shader.setBool("isEmissive", true);
+        shader.setBool("isMatte", false);
+
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, cubeTexture);
         glBindVertexArray(cubeVAO);
@@ -397,9 +514,20 @@ int main() {
         shader.setMat4("model", cubeModel2);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
+        // Drugi model
+        shader.setBool("isEmissive", false);
+        shader.setBool("isMatte", true);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture2);
+        glBindVertexArray(VAO2);
+        glm::mat4 model2Render = glm::translate(glm::mat4(1.0f), glm::vec3(-3.0f, 0.0f, 0.0f));
+        shader.setMat4("model", model2Render);
+        glDrawArrays(GL_TRIANGLES, 0, vertices2.size() / 8);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
     glfwTerminate();
     return 0;
 }

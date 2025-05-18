@@ -5,13 +5,21 @@ in vec2 TexCoords;
 in vec3 FragPos;
 in vec3 Normal;
 
+// Tekstury
 uniform sampler2D texture1;
 uniform sampler2D cubeTexture;
 uniform samplerCube depthMap;
+uniform sampler3D lutTexture;
+
+// Parametry oświetlenia
 uniform vec3 lightPos;
 uniform vec3 viewPos;
-uniform bool isEmissive;
 uniform float farPlane;
+
+// Flagi materiału
+uniform bool isEmissive;
+uniform bool isMatte;
+uniform bool applyLUT = true; // Nowa flaga kontrolująca LUT
 
 float ShadowCalculation(vec3 fragPos) {
     vec3 fragToLight = fragPos - lightPos;
@@ -25,6 +33,17 @@ float ShadowCalculation(vec3 fragPos) {
     return (currentDepth - bias > closestDepth) ? 1.0 : 0.0;
 }
 
+vec3 applyColorLUT(vec3 color) {
+    // Normalizacja koloru do przestrzeni LUT
+    color = clamp(color, 0.0, 1.0);
+    
+    // Pobranie wartości z tekstury 3D
+    vec3 lutColor = texture(lutTexture, color).rgb;
+    
+    // Korekta gamma dla LUT (opcjonalnie)
+    return pow(lutColor, vec3(1.0/2.2));
+}
+
 void main() {
     if (isEmissive) {
         vec3 texColor = texture(cubeTexture, TexCoords).rgb;
@@ -33,6 +52,7 @@ void main() {
         return;
     }
 
+    // Obliczenia oświetlenia
     vec3 albedo = texture(texture1, TexCoords).rgb;
     vec3 ambient = 0.2 * albedo;
 
@@ -42,19 +62,29 @@ void main() {
 
     vec3 lightColor = vec3(2.0, 0.7, 0.2);
 
+    // Składowa dyfuzyjna
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * lightColor * albedo;
 
+    // Składowa spekularna
     vec3 halfwayDir = normalize(lightDir + viewDir);
     float spec = pow(max(dot(norm, halfwayDir), 0.0), 32.0);
     vec3 specular = lightColor * spec;
 
+    // Attenuation
     float distance = length(lightPos - FragPos);
     float attenuation = 1.0 / (1.0 + 0.05 * distance + 0.015 * (distance * distance));
     diffuse *= attenuation;
     specular *= attenuation;
 
+    // Obliczenie cienia
     float shadow = ShadowCalculation(FragPos);
-    vec3 result = ambient + (1.0 - shadow) * (diffuse + specular);
+    vec3 result = ambient + (1.0 - shadow) * (diffuse + (isMatte ? vec3(0.0) : specular));
+
+    // Zastosowanie LUT
+    if (applyLUT) {
+        result = applyColorLUT(result);
+    }
+
     FragColor = vec4(result, 1.0);
 }
