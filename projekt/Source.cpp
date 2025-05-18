@@ -5,6 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <vector>
+#include <string> // Dodano dla std::string
 #include "dependencies/include/tiny_obj_loader.h"
 #include "dependencies/include/Camera.h"
 #include "dependencies/include/Shader.h"
@@ -25,12 +26,11 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 // Zmienne do kontroli ruchu kostki
-float rotationAngle = 0.0f;    // Kąt orbity wokół kowadła
-float spinAngle = 0.0f;        // Kąt obrotu wokół własnej osi
-const float orbitSpeed = 1.0f; // Prędkość orbity (radiany na sekundę)
-const float spinSpeed = 2.0f;  // Prędkość obrotu kostki (radiany na sekundę)
-const float orbitRadius = 3.0f;// Promień orbity
-
+float rotationAngle = 0.0f;
+float spinAngle = 0.0f;
+const float orbitSpeed = 1.0f;
+const float spinSpeed = 2.0f;
+const float orbitRadius = 3.0f;
 glm::vec3 cubePosition = glm::vec3(0.0f, 5.0f, 0.0f);
 
 // Zmienne dla drugiego modelu
@@ -41,7 +41,7 @@ std::vector<float> vertices2;
 GLuint VAO2, VBO2, texture2;
 
 // Global variables
-bool filterEnabled = false;  // Added global variable for filter state
+bool filterEnabled = false;
 
 GLuint loadCubeLUT(const char* path) {
     std::ifstream file(path);
@@ -50,7 +50,7 @@ GLuint loadCubeLUT(const char* path) {
     std::vector<float> data;
 
     while (std::getline(file, line)) {
-        line.erase(std::remove(line.begin(), line.end(), '\r'), line.end()); // Usuń znaki nowej linii
+        line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
         if (line.empty() || line[0] == '#') continue;
         if (line.find("LUT_3D_SIZE") != std::string::npos) {
             std::istringstream iss(line);
@@ -81,7 +81,6 @@ GLuint loadCubeLUT(const char* path) {
     return textureID;
 }
 
-
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     SCR_WIDTH = width;
     SCR_HEIGHT = height;
@@ -102,20 +101,19 @@ void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) camera.ProcessKeyboard(BACKWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.ProcessKeyboard(RIGHT, deltaTime);
-    
-    // Toggle filter with F key
+
     static bool fKeyPressed = false;
     if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
         if (!fKeyPressed) {
             filterEnabled = !filterEnabled;
             fKeyPressed = true;
         }
-    } else {
+    }
+    else {
         fKeyPressed = false;
     }
 }
 
-// Funkcja generująca kulę dla skyboxa
 void generateSphere(std::vector<float>& vertices, std::vector<unsigned int>& indices, unsigned int X_SEGMENTS = 64, unsigned int Y_SEGMENTS = 64) {
     const float PI = 3.14159265359f;
     for (unsigned int y = 0; y <= Y_SEGMENTS; ++y) {
@@ -136,7 +134,6 @@ void generateSphere(std::vector<float>& vertices, std::vector<unsigned int>& ind
             indices.push_back(y * (X_SEGMENTS + 1) + x);
             indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
             indices.push_back((y + 1) * (X_SEGMENTS + 1) + x + 1);
-
             indices.push_back(y * (X_SEGMENTS + 1) + x);
             indices.push_back((y + 1) * (X_SEGMENTS + 1) + x + 1);
             indices.push_back(y * (X_SEGMENTS + 1) + x + 1);
@@ -144,7 +141,6 @@ void generateSphere(std::vector<float>& vertices, std::vector<unsigned int>& ind
     }
 }
 
-// Funkcja wczytująca teksturę equirectangular
 GLuint loadEquirectangularTexture(const char* path) {
     int width, height, nrChannels;
     stbi_set_flip_vertically_on_load(true);
@@ -188,6 +184,7 @@ int main() {
     sf::Music music;
     if (!music.openFromFile("sounds/oppenheimer.mp3"))
         std::cerr << "Błąd ładowania pliku muzycznego!" << std::endl;
+    music.setVolume(0.0f);
     music.play();
 
     Shader shader("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
@@ -219,14 +216,14 @@ int main() {
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // Wczytywanie pierwszego modelu (model.obj)
+    // Wczytywanie modeli
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
     std::string warn, err;
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, "model.obj")) {
         std::cerr << "Failed to load model.obj: " << err << std::endl;
-        exit(1);
+        return 1; // Poprawiono na return zamiast exit
     }
 
     std::vector<float> vertices;
@@ -278,10 +275,9 @@ int main() {
         }
     }
 
-    // Wczytywanie drugiego modelu (lava_surface.obj)
     if (!tinyobj::LoadObj(&attrib2, &shapes2, &materials2, &warn, &err, "lava_surface.obj")) {
         std::cerr << "Failed to load lava_surface.obj: " << err << std::endl;
-        exit(1);
+        return 1; // Poprawiono na return zamiast exit
     }
 
     for (const auto& shape : shapes2) {
@@ -306,7 +302,7 @@ int main() {
 
     GLuint lutTexture = loadCubeLUT("MagicHour.cube");
 
-    // Tekstura dla pierwszego modelu
+    // Tekstury
     GLuint texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -324,7 +320,6 @@ int main() {
     }
     stbi_image_free(data);
 
-    // Tekstura dla kostki
     GLuint cubeTexture;
     glGenTextures(1, &cubeTexture);
     glBindTexture(GL_TEXTURE_2D, cubeTexture);
@@ -341,7 +336,6 @@ int main() {
     }
     stbi_image_free(cubeData);
 
-    // Tekstura dla drugiego modelu (lava.png)
     glGenTextures(1, &texture2);
     glBindTexture(GL_TEXTURE_2D, texture2);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -357,7 +351,7 @@ int main() {
     }
     stbi_image_free(data2);
 
-    // VAO i VBO dla pierwszego modelu
+    // VAO i VBO
     GLuint VAO, VBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -371,7 +365,6 @@ int main() {
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
-    // VAO i VBO dla kostki
     GLuint cubeVAO, cubeVBO;
     glGenVertexArrays(1, &cubeVAO);
     glGenBuffers(1, &cubeVBO);
@@ -385,7 +378,6 @@ int main() {
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
-    // VAO i VBO dla drugiego modelu
     glGenVertexArrays(1, &VAO2);
     glGenBuffers(1, &VBO2);
     glBindVertexArray(VAO2);
@@ -398,7 +390,6 @@ int main() {
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
-    // VAO, VBO i EBO dla skyboxa
     GLuint sVAO, sVBO, sEBO;
     glGenVertexArrays(1, &sVAO);
     glGenBuffers(1, &sVBO);
@@ -425,15 +416,13 @@ int main() {
         lastFrame = currentFrame;
         processInput(window);
 
-        // Kostka porusza się tylko w osi Y (sinusoidalnie)
-        float baseY = 5.0f; // wysokość bazowa
-        float amplitude = 1.0f; // amplituda ruchu góra-dół
-        float frequency = 1.0f; // częstotliwość (im mniejsza, tym wolniej)
+        float baseY = 5.0f;
+        float amplitude = 1.0f;
+        float frequency = 1.0f;
         cubePosition.x = 0.0f;
         cubePosition.z = 0.0f;
         cubePosition.y = baseY + amplitude * sin(currentFrame * frequency);
 
-        // Powolny obrót wokół własnej osi
         spinAngle += spinSpeed * deltaTime;
         if (spinAngle > 2 * glm::pi<float>())
             spinAngle -= 2 * glm::pi<float>();
@@ -454,24 +443,22 @@ int main() {
         glClear(GL_DEPTH_BUFFER_BIT);
         depthShader.use();
         for (unsigned int i = 0; i < 6; ++i) {
-            depthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+            std::string uniformName = "shadowMatrices[" + std::to_string(i) + "]";
+            depthShader.setMat4(uniformName.c_str(), shadowTransforms[i]);
         }
         depthShader.setVec3("lightPos", lightPos);
         depthShader.setFloat("farPlane", far_plane);
 
-        // Pierwszy model
         depthShader.setMat4("model", glm::mat4(1.0f));
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 8);
 
-        // Kostka
         glm::mat4 cubeModel = glm::translate(glm::mat4(1.0f), cubePosition);
-        cubeModel = glm::rotate(cubeModel, spinAngle, glm::vec3(0.0f, 1.0f, 0.0f)); // obrót wokół osi Y
+        cubeModel = glm::rotate(cubeModel, spinAngle, glm::vec3(0.0f, 1.0f, 0.0f));
         depthShader.setMat4("model", cubeModel);
         glBindVertexArray(cubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
-        // Drugi model
         glm::mat4 model2 = glm::translate(glm::mat4(1.0f), glm::vec3(-3.0f, 0.0f, 0.0f));
         depthShader.setMat4("model", model2);
         glBindVertexArray(VAO2);
@@ -480,12 +467,15 @@ int main() {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // Renderowanie skyboxa
+        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT); // Ustaw viewport na cały obszar okna
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glDepthMask(GL_FALSE);
+        glDepthFunc(GL_LEQUAL);
         skyShader.use();
-        glm::mat4 projection = glm::perspective(glm::radians(60.0f), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
+        float aspectRatio = SCR_WIDTH / (float)(SCR_HEIGHT > 0 ? SCR_HEIGHT : 1);
+        glm::mat4 projection = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 5000.0f);
         glm::mat4 view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
-        glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(50.0f)); // Duża kula jako skybox
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), camera.Position) * glm::scale(glm::mat4(1.0f), glm::vec3(100.0f));
         skyShader.setMat4("projection", projection);
         skyShader.setMat4("view", view);
         skyShader.setMat4("model", model);
@@ -495,13 +485,14 @@ int main() {
         glBindVertexArray(sVAO);
         glDrawElements(GL_TRIANGLES, indicesSky.size(), GL_UNSIGNED_INT, 0);
         glDepthMask(GL_TRUE);
+        glDepthFunc(GL_LESS);
 
         // Normalne renderowanie sceny
-        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT); // Ponowne ustawienie viewportu dla sceny
         shader.use();
         shader.setVec3("viewPos", camera.Position);
         shader.setVec3("lightPos", lightPos);
-        shader.setMat4("projection", glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f));
+        shader.setMat4("projection", glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f));
         shader.setMat4("view", camera.GetViewMatrix());
         shader.setInt("depthMap", 1);
         shader.setFloat("farPlane", far_plane);
@@ -513,29 +504,24 @@ int main() {
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
 
-        // Pierwszy model
         shader.setBool("isEmissive", false);
         shader.setBool("isMatte", false);
-
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
         glBindVertexArray(VAO);
         shader.setMat4("model", glm::mat4(1.0f));
         glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 8);
 
-        // Kostka
         shader.setBool("isEmissive", true);
         shader.setBool("isMatte", false);
-
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, cubeTexture);
         glBindVertexArray(cubeVAO);
         glm::mat4 cubeModel2 = glm::translate(glm::mat4(1.0f), cubePosition);
-        cubeModel2 = glm::rotate(cubeModel2, spinAngle, glm::vec3(0.0f, 1.0f, 0.0f)); // obrót wokół osi Y
+        cubeModel2 = glm::rotate(cubeModel2, spinAngle, glm::vec3(0.0f, 1.0f, 0.0f));
         shader.setMat4("model", cubeModel2);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
-        // Drugi model
         shader.setBool("isEmissive", false);
         shader.setBool("isMatte", true);
         glActiveTexture(GL_TEXTURE0);
