@@ -40,6 +40,9 @@ std::vector<tinyobj::material_t> materials2;
 std::vector<float> vertices2;
 GLuint VAO2, VBO2, texture2;
 
+// Global variables
+bool filterEnabled = false;  // Added global variable for filter state
+
 GLuint loadCubeLUT(const char* path) {
     std::ifstream file(path);
     std::string line;
@@ -68,8 +71,8 @@ GLuint loadCubeLUT(const char* path) {
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_3D, textureID);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_TEXTURE_WRAP_S);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -99,6 +102,17 @@ void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) camera.ProcessKeyboard(BACKWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.ProcessKeyboard(RIGHT, deltaTime);
+    
+    // Toggle filter with F key
+    static bool fKeyPressed = false;
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+        if (!fKeyPressed) {
+            filterEnabled = !filterEnabled;
+            fKeyPressed = true;
+        }
+    } else {
+        fKeyPressed = false;
+    }
 }
 
 // Funkcja generująca kulę dla skyboxa
@@ -172,9 +186,8 @@ int main() {
     glEnable(GL_DEPTH_TEST);
 
     sf::Music music;
-    if (!music.openFromFile("sounds/templars.mp3"))
+    if (!music.openFromFile("sounds/oppenheimer.mp3"))
         std::cerr << "Błąd ładowania pliku muzycznego!" << std::endl;
-    music.setVolume(0.0f);
     music.play();
 
     Shader shader("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
@@ -412,13 +425,18 @@ int main() {
         lastFrame = currentFrame;
         processInput(window);
 
-        // Aktualizacja pozycji kostki
-        rotationAngle += orbitSpeed * deltaTime;
-        if (rotationAngle > 2 * glm::pi<float>())
-            rotationAngle -= 2 * glm::pi<float>();
-        cubePosition.x = orbitRadius * cos(rotationAngle);
-        cubePosition.z = orbitRadius * sin(rotationAngle);
-        cubePosition.y = 5.0f;
+        // Kostka porusza się tylko w osi Y (sinusoidalnie)
+        float baseY = 5.0f; // wysokość bazowa
+        float amplitude = 1.0f; // amplituda ruchu góra-dół
+        float frequency = 1.0f; // częstotliwość (im mniejsza, tym wolniej)
+        cubePosition.x = 0.0f;
+        cubePosition.z = 0.0f;
+        cubePosition.y = baseY + amplitude * sin(currentFrame * frequency);
+
+        // Powolny obrót wokół własnej osi
+        spinAngle += spinSpeed * deltaTime;
+        if (spinAngle > 2 * glm::pi<float>())
+            spinAngle -= 2 * glm::pi<float>();
 
         // Renderowanie mapy cieni
         glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), 1.0f, 1.0f, far_plane);
@@ -448,6 +466,7 @@ int main() {
 
         // Kostka
         glm::mat4 cubeModel = glm::translate(glm::mat4(1.0f), cubePosition);
+        cubeModel = glm::rotate(cubeModel, spinAngle, glm::vec3(0.0f, 1.0f, 0.0f)); // obrót wokół osi Y
         depthShader.setMat4("model", cubeModel);
         glBindVertexArray(cubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -466,7 +485,7 @@ int main() {
         skyShader.use();
         glm::mat4 projection = glm::perspective(glm::radians(60.0f), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
-        glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(10.0f));
+        glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(50.0f)); // Duża kula jako skybox
         skyShader.setMat4("projection", projection);
         skyShader.setMat4("view", view);
         skyShader.setMat4("model", model);
@@ -486,6 +505,7 @@ int main() {
         shader.setMat4("view", camera.GetViewMatrix());
         shader.setInt("depthMap", 1);
         shader.setFloat("farPlane", far_plane);
+        shader.setBool("applyLUT", filterEnabled);
 
         glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_3D, lutTexture);
@@ -511,6 +531,7 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, cubeTexture);
         glBindVertexArray(cubeVAO);
         glm::mat4 cubeModel2 = glm::translate(glm::mat4(1.0f), cubePosition);
+        cubeModel2 = glm::rotate(cubeModel2, spinAngle, glm::vec3(0.0f, 1.0f, 0.0f)); // obrót wokół osi Y
         shader.setMat4("model", cubeModel2);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 

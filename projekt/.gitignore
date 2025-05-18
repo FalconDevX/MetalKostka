@@ -1,0 +1,23 @@
+# Ignoruj katalogi buildów
+x64/
+debug/
+Debug/
+Release/
+*.exe
+*.obj
+*.o
+*.log
+*.pdb
+*.ilk
+*.idb
+*.ipch
+*.aps
+*.ncb
+*.suo
+*.user
+*.opensdf
+*.sdf
+*.cache
+*.db
+*.VC.db
+*.VC.opendb 

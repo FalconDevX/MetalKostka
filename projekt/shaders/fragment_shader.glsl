@@ -54,7 +54,7 @@ void main() {
 
     // Obliczenia oświetlenia
     vec3 albedo = texture(texture1, TexCoords).rgb;
-    vec3 ambient = 0.2 * albedo;
+    vec3 ambient = vec3(0.0); // Brak światła otoczenia
 
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(lightPos - FragPos);
@@ -87,4 +87,4 @@ void main() {
     }
 
     FragColor = vec4(result, 1.0);
-}
+}   
