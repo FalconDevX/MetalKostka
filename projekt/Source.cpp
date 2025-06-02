@@ -25,7 +25,6 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-// Zmienne do kontroli ruchu kostki
 float rotationAngle = 0.0f;
 float spinAngle = 0.0f;
 float orbitSpeed = 1.0f;
@@ -34,7 +33,6 @@ const float orbitRadius = 3.0f;
 const float speedChangeFactor = 2.0f;
 glm::vec3 cubePosition = glm::vec3(0.0f, 5.0f, 0.0f);
 
-// Zmienne dla drugiego modelu
 tinyobj::attrib_t attrib2;
 std::vector<tinyobj::shape_t> shapes2;
 std::vector<tinyobj::material_t> materials2;
@@ -98,12 +96,10 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
     if (action == GLFW_PRESS) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            // Przyspieszenie - lewy przycisk
             orbitSpeed *= speedChangeFactor;
             spinSpeed *= speedChangeFactor;
         }
         else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-            // Zwolnienie - prawy przycisk
             orbitSpeed /= speedChangeFactor;
             spinSpeed /= speedChangeFactor;
         }
