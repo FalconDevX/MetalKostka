@@ -6,3 +6,5 @@ Debug/
 Release/
 **/Release/
 /projekt/x64
+projekt/x64/
+projekt/debug/

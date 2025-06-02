@@ -13,10 +13,10 @@ C:\OpenGL\MetalKostka\projekt\Source.cpp(92,19): warning C4244: 'initializing': 
 C:\OpenGL\MetalKostka\projekt\Source.cpp(93,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
 C:\OpenGL\MetalKostka\projekt\Source.cpp(94,13): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
 C:\OpenGL\MetalKostka\projekt\Source.cpp(94,27): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\OpenGL\MetalKostka\projekt\Source.cpp(414,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\OpenGL\MetalKostka\projekt\Source.cpp(454,55): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
-C:\OpenGL\MetalKostka\projekt\Source.cpp(465,56): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
-C:\OpenGL\MetalKostka\projekt\Source.cpp(486,53): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
-C:\OpenGL\MetalKostka\projekt\Source.cpp(513,55): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
-C:\OpenGL\MetalKostka\projekt\Source.cpp(532,56): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(431,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(471,55): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(482,56): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(503,53): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(530,55): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\OpenGL\MetalKostka\projekt\Source.cpp(549,56): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
   projekt.vcxproj -> C:\OpenGL\MetalKostka\x64\Debug\projekt.exe

@@ -5,7 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <vector>
-#include <string> // Dodano dla std::string
+#include <string> 
 #include "dependencies/include/tiny_obj_loader.h"
 #include "dependencies/include/Camera.h"
 #include "dependencies/include/Shader.h"
@@ -28,9 +28,10 @@ float lastFrame = 0.0f;
 // Zmienne do kontroli ruchu kostki
 float rotationAngle = 0.0f;
 float spinAngle = 0.0f;
-const float orbitSpeed = 1.0f;
-const float spinSpeed = 2.0f;
+float orbitSpeed = 1.0f;
+float spinSpeed = 2.0f;
 const float orbitRadius = 3.0f;
+const float speedChangeFactor = 2.0f;
 glm::vec3 cubePosition = glm::vec3(0.0f, 5.0f, 0.0f);
 
 // Zmienne dla drugiego modelu
@@ -40,7 +41,6 @@ std::vector<tinyobj::material_t> materials2;
 std::vector<float> vertices2;
 GLuint VAO2, VBO2, texture2;
 
-// Global variables
 bool filterEnabled = false;
 
 GLuint loadCubeLUT(const char* path) {
@@ -93,6 +93,21 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     float yoffset = lastY - ypos;
     lastX = xpos; lastY = ypos;
     camera.ProcessMouseMovement(xoffset, yoffset);
+}
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+    if (action == GLFW_PRESS) {
+        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+            // Przyspieszenie - lewy przycisk
+            orbitSpeed *= speedChangeFactor;
+            spinSpeed *= speedChangeFactor;
+        }
+        else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+            // Zwolnienie - prawy przycisk
+            orbitSpeed /= speedChangeFactor;
+            spinSpeed /= speedChangeFactor;
+        }
+    }
 }
 
 void processInput(GLFWwindow* window) {
@@ -176,6 +191,7 @@ int main() {
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) return -1;
 
@@ -221,9 +237,10 @@ int main() {
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
     std::string warn, err;
+
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, "model.obj")) {
         std::cerr << "Failed to load model.obj: " << err << std::endl;
-        return 1; // Poprawiono na return zamiast exit
+        return 1; 
     }
 
     std::vector<float> vertices;
@@ -277,7 +294,7 @@ int main() {
 
     if (!tinyobj::LoadObj(&attrib2, &shapes2, &materials2, &warn, &err, "lava_surface.obj")) {
         std::cerr << "Failed to load lava_surface.obj: " << err << std::endl;
-        return 1; // Poprawiono na return zamiast exit
+        return 1; 
     }
 
     for (const auto& shape : shapes2) {
@@ -467,7 +484,7 @@ int main() {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // Renderowanie skyboxa
-        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT); // Ustaw viewport na cały obszar okna
+        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT); 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glDepthMask(GL_FALSE);
         glDepthFunc(GL_LEQUAL);
@@ -488,7 +505,7 @@ int main() {
         glDepthFunc(GL_LESS);
 
         // Normalne renderowanie sceny
-        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT); // Ponowne ustawienie viewportu dla sceny
+        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         shader.use();
         shader.setVec3("viewPos", camera.Position);
         shader.setVec3("lightPos", lightPos);
